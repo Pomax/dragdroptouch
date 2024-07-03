@@ -448,10 +448,10 @@ class DragDropTouch {
    * @param el
    * @returns
    */
-  _closestDraggable(el: Node | null) {
-    for (; el; el = el.parentElement) {
-      if (/*e.hasAttribute('draggable') &&*/ (el as any).draggable) {
-        return el;
+  _closestDraggable(element: HTMLElement | null) {
+    for (let e = element; e !== null; e = e.parentElement) {
+      if (e.getAttribute("draggable") || e.draggable) {
+        return e;
       }
     }
     return null;

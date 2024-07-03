@@ -7,12 +7,14 @@ import { setupDragDropTouch } from "somewhere/drag-drop-touch.esm.js";
 setupDragDropTouch(...)
 ```
 
-using the same arguments that the original `DragDropTouch` class takes, or:
+using the same arguments that the original `DragDropTouch` class takes.
 
-```js
-import "somewhere/drag-drop-touch.esm.js?autoload";
+However, it also supports a dedicated autoload:
+
+```html
+<script src="somewhere/drag-drop-touch.esm.js?autoload" type="module"></script>
 ```
 
-With the `autoload` argument ensuring that things "just work(tm)".
+This will load the module and immediately activate it due to the `?autoload` argument.
 
 The updated demo URL is https://pomax.github.io/dragdroptouch/demo/index.html
