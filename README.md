@@ -13,6 +13,6 @@ using the same arguments that the original `DragDropTouch` class takes, or:
 import "somewhere/drag-drop-touch.esm.js?autoload";
 ```
 
-Where the `autoload` argument ensuring that things "just work(tm)".
+With the `autoload` argument ensuring that things "just work(tm)".
 
 The updated demo URL is https://pomax.github.io/dragdroptouch/demo/index.html
