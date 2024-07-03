@@ -1,14 +1,18 @@
 {
   "name": "dragdroptouch",
-  "version": "1.0.0",
-  "description": "Polyfill that enables HTML5 drag drop support on mobile (touch) devices",
-  "main": "DragDropTouch.js",
+  "version": "2.0.0",
+  "description": "A shim that enables HTML5 drag-and-drop support for touch devices",
+  "type": "module",
+  "main": "dist/drag-drop-touch.esm.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npm run build && npm run build:min && python -m http.server",
+    "base": "esbuild --bundle --format=esm ./ts/drag-drop-touch.ts",
+    "build": "npm run base -- --outfile=dist/drag-drop-touch.esm.js",
+    "build:min": "npm run base -- --minify --outfile=dist/drag-drop-touch.esm.min.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rozek/dragdroptouch.git"
+    "url": "git+https://github.com/Bernardo-Castilho/dragdroptouch.git"
   },
   "keywords": [
     "html5",
@@ -19,11 +23,15 @@
   ],
   "author": "Bernardo Castilho (https://github.com/Bernardo-Castilho)",
   "contributors": [
-    "Andreas Rozek <a.rozek@gmx.de> (https://www.rozek.de/)"
+    "Andreas Rozek <a.rozek@gmx.de> (https://www.rozek.de/)",
+    "Pomax <pomax@nihongoresources.com> (https://pomax.github.io)"
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rozek/dragdroptouch/issues"
+    "url": "https://github.com/Bernardo-Castilho/dragdroptouch/issues"
   },
-  "homepage": "https://github.com/rozek/dragdroptouch#readme"
+  "homepage": "https://github.com/Bernardo-Castilho/dragdroptouch#readme",
+  "devDependencies": {
+    "esbuild": "^0.23.0"
+  }
 }
