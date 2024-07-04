@@ -1,18 +1,4 @@
 // ts/drag-drop-touch-util.ts
-function supportsPassive(dragRoot) {
-  let supports = false;
-  try {
-    dragRoot.addEventListener("test", function() {
-    }, {
-      get passive() {
-        supports = true;
-        return true;
-      }
-    });
-  } catch {
-  }
-  return supports;
-}
 function pointFrom(e, page = false) {
   const touch = e.touches[0];
   return {
@@ -21,10 +7,7 @@ function pointFrom(e, page = false) {
   };
 }
 function copyProps(dst, src, props) {
-  for (let i = 0; i < props.length; i++) {
-    let p = props[i];
-    dst[p] = src[p];
-  }
+  props.forEach((p) => dst[p] = src[p]);
 }
 function newForwardableEvent(type, srcEvent, target) {
   const _kbdProps = ["altKey", "ctrlKey", "metaKey", "shiftKey"];
@@ -68,23 +51,23 @@ function copyStyle(src, dst) {
     cDst.height = src.height;
     cDst.getContext("2d").drawImage(src, 0, 0);
   }
-  copyComputedStyles(src, dst, (k) => k.indexOf("transition") < 0);
+  copyComputedStyles(src, dst);
   dst.style.pointerEvents = "none";
   for (let i = 0; i < src.children.length; i++) {
     copyStyle(src.children[i], dst.children[i]);
   }
 }
-function copyComputedStyles(src, dst, copyKey) {
-  let cs = getComputedStyle(src);
-  for (let key in cs)
-    if (!copyKey || copyKey(key)) {
-      Object.entries(dst.style).forEach(([key2, value]) => cs[key2] = value);
-    }
+function copyComputedStyles(src, dst) {
+  const cs = getComputedStyle(src);
+  for (let key in cs) {
+    if (key.startsWith("transition")) continue;
+    dst.style[key] = cs[key];
+  }
 }
 function removeTroublesomeAttributes(dst) {
-  ["id", "class", "style", "draggable"].forEach(function(att) {
-    dst.removeAttribute(att);
-  });
+  ["id", "class", "style", "draggable"].forEach(
+    (att) => dst.removeAttribute(att)
+  );
 }
 
 // ts/drag-dto.ts
@@ -201,8 +184,17 @@ var DragDropTouch = class {
     this.configuration = { ...DefaultConfiguration, ...options || {} };
     this._dragRoot = dragRoot;
     this._dropRoot = dropRoot;
-    while (!this._dropRoot.elementFromPoint && this._dropRoot.parentNode)
+    while (!this._dropRoot.elementFromPoint && this._dropRoot.parentNode) {
       this._dropRoot = this._dropRoot.parentNode;
+    }
+    this._reset();
+    this.listen();
+  }
+  /**
+   * ...docs go here...
+   */
+  _reset() {
+    this._destroyImage();
     this._dragSource = null;
     this._lastTouch = null;
     this._lastTarget = null;
@@ -213,7 +205,7 @@ var DragDropTouch = class {
     this._img = null;
     this._imgCustom = null;
     this._imgOffset = { x: 0, y: 0 };
-    this.listen();
+    clearInterval(this._pressHoldIntervalId);
   }
   /**
    * ...docs go here...
@@ -221,25 +213,16 @@ var DragDropTouch = class {
    */
   listen() {
     if (!navigator.maxTouchPoints) return;
-    const opt = supportsPassive(this._dragRoot) ? { passive: false, capture: false } : false;
-    this._dragRoot.addEventListener(
-      "touchstart",
-      this._touchstart.bind(this),
-      opt
-    );
-    this._dragRoot.addEventListener(
-      "touchmove",
-      this._touchmove.bind(this),
-      opt
-    );
-    this._dragRoot.addEventListener(
-      "touchend",
-      this._touchend.bind(this)
-    );
-    this._dragRoot.addEventListener(
-      "touchcancel",
-      this._touchend.bind(this)
-    );
+    const register = (name, fn) => {
+      this._dragRoot.addEventListener(name, fn, {
+        passive: false,
+        capture: false
+      });
+    };
+    register("touchstart", (e) => this._touchstart(e));
+    register("touchmove", (e) => this._touchmove(e));
+    register("touchend", (e) => this._touchend(e));
+    register("touchcancel", (e) => this._touchend(e));
   }
   /**
    * ...docs go here...
@@ -390,28 +373,11 @@ var DragDropTouch = class {
   }
   /**
    * ...docs go here...
-   */
-  _reset() {
-    this._destroyImage();
-    this._dragSource = null;
-    this._lastTouch = null;
-    this._lastTarget = null;
-    this._ptDown = null;
-    this._isDragEnabled = false;
-    this._isDropZone = false;
-    this._dataTransfer = new DragDTO(this);
-    clearInterval(this._pressHoldIntervalId);
-  }
-  /**
-   * ...docs go here...
    * @param e
    * @returns
    */
   _getDelta(e) {
     if (!this._ptDown) return 0;
-    if (this.configuration.isPressHoldMode && !this._ptDown) {
-      return 0;
-    }
     let p = pointFrom(e);
     return Math.abs(p.x - this._ptDown.x) + Math.abs(p.y - this._ptDown.y);
   }
@@ -421,8 +387,9 @@ var DragDropTouch = class {
    * @returns
    */
   _getTarget(e) {
-    let pt = pointFrom(e), el = this._dropRoot.elementFromPoint(pt.x, pt.y);
-    while (el && getComputedStyle(el).pointerEvents == "none") {
+    const pt = pointFrom(e);
+    let el = this._dropRoot.elementFromPoint(pt.x, pt.y);
+    while (el && getComputedStyle(el).pointerEvents === "none") {
       el = el.parentElement;
     }
     return el;
@@ -451,9 +418,7 @@ var DragDropTouch = class {
    * ...docs go here...
    */
   _destroyImage() {
-    if (this._img && this._img.parentElement) {
-      this._img.parentElement.removeChild(this._img);
-    }
+    if (this._img) this._img.remove();
     this._img = null;
     this._imgCustom = null;
   }
@@ -464,12 +429,13 @@ var DragDropTouch = class {
   _moveImage(e) {
     requestAnimationFrame(() => {
       if (this._img) {
-        let pt = pointFrom(e, true), s = this._img.style;
-        s.position = "absolute";
-        s.pointerEvents = "none";
-        s.zIndex = "999999";
-        s.left = Math.round(pt.x - this._imgOffset.x) + "px";
-        s.top = Math.round(pt.y - this._imgOffset.y) + "px";
+        const pt = pointFrom(e, true);
+        let { style } = this._img;
+        style.position = "absolute";
+        style.pointerEvents = "none";
+        style.zIndex = "999999";
+        style.left = Math.round(pt.x - this._imgOffset.x) + "px";
+        style.top = Math.round(pt.y - this._imgOffset.y) + "px";
       }
     });
   }
@@ -493,7 +459,7 @@ var DragDropTouch = class {
    * @returns
    */
   _closestDraggable(element) {
-    for (let e = element; e !== null; e = e.parentElement) {
+    for (let e = element; e; e = e.parentElement) {
       if (e.getAttribute("draggable") || e.draggable) {
         return e;
       }

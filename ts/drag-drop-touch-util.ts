@@ -3,28 +3,6 @@ type Mutable<T extends { [x: string]: any }, K extends string> = {
 };
 
 /**
- * detect passive event support
- * see https://github.com/Modernizr/Modernizr/issues/1894
- *
- * @param dragRoot
- * @returns
- */
-export function supportsPassive(dragRoot: {
-  addEventListener: (...any: any[]) => any;
-}) {
-  let supports = false;
-  try {
-    dragRoot.addEventListener("test", function () {}, {
-      get passive() {
-        supports = true;
-        return true;
-      },
-    });
-  } catch {}
-  return supports;
-}
-
-/**
  * ...docs go here...
  * @param e
  * @param page
@@ -49,10 +27,7 @@ export function copyProps(
   src: Record<string, any>,
   props: Array<string>
 ) {
-  for (let i = 0; i < props.length; i++) {
-    let p = props[i];
-    dst[p] = src[p];
-  }
+  props.forEach((p) => (dst[p] = src[p]));
 }
 
 /**
@@ -133,8 +108,7 @@ export function copyStyle(src: HTMLElement, dst: HTMLElement) {
     cDst.getContext("2d")!.drawImage(src, 0, 0);
   }
 
-  // copy style (without transitions)
-  copyComputedStyles(src, dst, (k) => k.indexOf("transition") < 0);
+  copyComputedStyles(src, dst);
   dst.style.pointerEvents = "none";
 
   // and repeat for all children
@@ -147,18 +121,13 @@ export function copyStyle(src: HTMLElement, dst: HTMLElement) {
  * ...docs go here...
  * @param src
  * @param dst
- * @param copyKey
  */
-function copyComputedStyles(
-  src: any,
-  dst: any,
-  copyKey?: (k: string) => boolean
-) {
-  let cs = getComputedStyle(src);
-  for (let key in cs)
-    if (!copyKey || copyKey(key)) {
-      Object.entries(dst.style).forEach(([key, value]) => (cs[key] = value));
-    }
+function copyComputedStyles(src: any, dst: any) {
+  const cs = getComputedStyle(src);
+  for (let key in cs) {
+    if (key.startsWith("transition")) continue;
+    dst.style[key] = cs[key];
+  }
 }
 
 /**
@@ -166,7 +135,7 @@ function copyComputedStyles(
  * @param dst
  */
 function removeTroublesomeAttributes(dst: any) {
-  ["id", "class", "style", "draggable"].forEach(function (att) {
-    dst.removeAttribute(att);
-  });
+  ["id", "class", "style", "draggable"].forEach((att) =>
+    dst.removeAttribute(att)
+  );
 }

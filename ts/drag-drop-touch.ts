@@ -4,7 +4,6 @@ import {
   copyStyle,
   newForwardableEvent,
   pointFrom,
-  supportsPassive,
 } from "./drag-drop-touch-util";
 import { DragDTO } from "./drag-dto";
 
@@ -86,8 +85,18 @@ class DragDropTouch {
     while (
       !(this._dropRoot as any).elementFromPoint &&
       this._dropRoot.parentNode
-    )
+    ) {
       this._dropRoot = this._dropRoot.parentNode as any;
+    }
+    this._reset();
+    this.listen();
+  }
+
+  /**
+   * ...docs go here...
+   */
+  _reset() {
+    this._destroyImage();
     this._dragSource = null;
     this._lastTouch = null;
     this._lastTarget = null;
@@ -98,8 +107,7 @@ class DragDropTouch {
     this._img = null;
     this._imgCustom = null;
     this._imgOffset = { x: 0, y: 0 };
-    // this._pressHoldIntervalId = null;
-    this.listen();
+    clearInterval(this._pressHoldIntervalId);
   }
 
   /**
@@ -109,28 +117,17 @@ class DragDropTouch {
   listen() {
     if (!navigator.maxTouchPoints) return;
 
-    const opt = supportsPassive(this._dragRoot)
-      ? { passive: false, capture: false }
-      : false;
+    const register = (name, fn) => {
+      this._dragRoot.addEventListener(name, fn as EventListener, {
+        passive: false,
+        capture: false,
+      });
+    };
 
-    this._dragRoot.addEventListener(
-      "touchstart",
-      this._touchstart.bind(this) as EventListener,
-      opt
-    );
-    this._dragRoot.addEventListener(
-      "touchmove",
-      this._touchmove.bind(this) as EventListener,
-      opt
-    );
-    this._dragRoot.addEventListener(
-      "touchend",
-      this._touchend.bind(this) as EventListener
-    );
-    this._dragRoot.addEventListener(
-      "touchcancel",
-      this._touchend.bind(this) as EventListener
-    );
+    register("touchstart", (e) => this._touchstart(e));
+    register("touchmove", (e) => this._touchmove(e));
+    register("touchend", (e) => this._touchend(e));
+    register("touchcancel", (e) => this._touchend(e));
   }
 
   /**
@@ -238,7 +235,8 @@ class DragDropTouch {
    * @returns
    */
   _touchend(e: TouchEvent) {
-    if (!(this._lastTouch && e.target && this._lastTarget)) return; // TODO check this new logic
+    // TODO: check this new logic
+    if (!(this._lastTouch && e.target && this._lastTarget)) return;
 
     if (this._shouldHandle(e)) {
       if (this._dispatchEvent(this._lastTouch, "mouseup", e.target)) {
@@ -326,29 +324,11 @@ class DragDropTouch {
 
   /**
    * ...docs go here...
-   */
-  _reset() {
-    this._destroyImage();
-    this._dragSource = null;
-    this._lastTouch = null;
-    this._lastTarget = null;
-    this._ptDown = null;
-    this._isDragEnabled = false;
-    this._isDropZone = false;
-    this._dataTransfer = new DragDTO(this);
-    clearInterval(this._pressHoldIntervalId);
-  }
-
-  /**
-   * ...docs go here...
    * @param e
    * @returns
    */
   _getDelta(e: TouchEvent) {
-    if (!this._ptDown) return 0; // FIXME: Added by NDP, is this OK?
-    if (this.configuration.isPressHoldMode && !this._ptDown) {
-      return 0;
-    }
+    if (!this._ptDown) return 0;
     let p = pointFrom(e);
     return Math.abs(p.x - this._ptDown.x) + Math.abs(p.y - this._ptDown.y);
   }
@@ -359,9 +339,9 @@ class DragDropTouch {
    * @returns
    */
   _getTarget(e: TouchEvent) {
-    let pt = pointFrom(e),
-      el = this._dropRoot.elementFromPoint(pt.x, pt.y);
-    while (el && getComputedStyle(el).pointerEvents == "none") {
+    const pt = pointFrom(e);
+    let el = this._dropRoot.elementFromPoint(pt.x, pt.y);
+    while (el && getComputedStyle(el).pointerEvents === "none") {
       el = el.parentElement;
     }
     return el;
@@ -397,9 +377,7 @@ class DragDropTouch {
    * ...docs go here...
    */
   _destroyImage() {
-    if (this._img && this._img.parentElement) {
-      this._img.parentElement.removeChild(this._img);
-    }
+    if (this._img) this._img.remove();
     this._img = null;
     this._imgCustom = null;
   }
@@ -411,13 +389,13 @@ class DragDropTouch {
   _moveImage(e: TouchEvent) {
     requestAnimationFrame(() => {
       if (this._img) {
-        let pt = pointFrom(e, true),
-          s = this._img.style;
-        s.position = "absolute";
-        s.pointerEvents = "none";
-        s.zIndex = "999999";
-        s.left = Math.round(pt.x - this._imgOffset.x) + "px";
-        s.top = Math.round(pt.y - this._imgOffset.y) + "px";
+        const pt = pointFrom(e, true);
+        let { style } = this._img;
+        style.position = "absolute";
+        style.pointerEvents = "none";
+        style.zIndex = "999999";
+        style.left = Math.round(pt.x - this._imgOffset.x) + "px";
+        style.top = Math.round(pt.y - this._imgOffset.y) + "px";
       }
     });
   }
@@ -449,7 +427,7 @@ class DragDropTouch {
    * @returns
    */
   _closestDraggable(element: HTMLElement | null) {
-    for (let e = element; e !== null; e = e.parentElement) {
+    for (let e = element; e; e = e.parentElement) {
       if (e.getAttribute("draggable") || e.draggable) {
         return e;
       }
