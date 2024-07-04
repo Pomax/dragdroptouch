@@ -3,28 +3,6 @@ type Mutable<T extends { [x: string]: any }, K extends string> = {
 };
 
 /**
- * detect passive event support
- * see https://github.com/Modernizr/Modernizr/issues/1894
- *
- * @param dragRoot
- * @returns
- */
-export function supportsPassive(dragRoot: {
-  addEventListener: (...any: any[]) => any;
-}) {
-  let supports = false;
-  try {
-    dragRoot.addEventListener("test", function () {}, {
-      get passive() {
-        supports = true;
-        return true;
-      },
-    });
-  } catch {}
-  return supports;
-}
-
-/**
  * ...docs go here...
  * @param e
  * @param page
@@ -134,7 +112,7 @@ export function copyStyle(src: HTMLElement, dst: HTMLElement) {
   }
 
   // copy style (without transitions)
-  copyComputedStyles(src, dst, (k) => k.indexOf("transition") < 0);
+  copyComputedStyles(src, dst);
   dst.style.pointerEvents = "none";
 
   // and repeat for all children
@@ -149,16 +127,14 @@ export function copyStyle(src: HTMLElement, dst: HTMLElement) {
  * @param dst
  * @param copyKey
  */
-function copyComputedStyles(
-  src: any,
-  dst: any,
-  copyKey?: (k: string) => boolean
-) {
+function copyComputedStyles(src: any, dst: any) {
   let cs = getComputedStyle(src);
-  for (let key in cs)
-    if (!copyKey || copyKey(key)) {
-      Object.entries(dst.style).forEach(([key, value]) => (cs[key] = value));
-    }
+  for (let key in cs) {
+    if (key.includes("transition")) continue;
+    try {
+      dst[key] = cs[key];
+    } catch (_) {}
+  }
 }
 
 /**

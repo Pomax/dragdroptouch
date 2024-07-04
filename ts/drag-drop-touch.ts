@@ -4,7 +4,6 @@ import {
   copyStyle,
   newForwardableEvent,
   pointFrom,
-  supportsPassive,
 } from "./drag-drop-touch-util";
 import { DragDTO } from "./drag-dto";
 
@@ -109,9 +108,7 @@ class DragDropTouch {
   listen() {
     if (!navigator.maxTouchPoints) return;
 
-    const opt = supportsPassive(this._dragRoot)
-      ? { passive: false, capture: false }
-      : false;
+    const opt = { passive: false, capture: false };
 
     this._dragRoot.addEventListener(
       "touchstart",

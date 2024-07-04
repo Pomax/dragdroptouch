@@ -1,18 +1,4 @@
 // ts/drag-drop-touch-util.ts
-function supportsPassive(dragRoot) {
-  let supports = false;
-  try {
-    dragRoot.addEventListener("test", function() {
-    }, {
-      get passive() {
-        supports = true;
-        return true;
-      }
-    });
-  } catch {
-  }
-  return supports;
-}
 function pointFrom(e, page = false) {
   const touch = e.touches[0];
   return {
@@ -68,18 +54,21 @@ function copyStyle(src, dst) {
     cDst.height = src.height;
     cDst.getContext("2d").drawImage(src, 0, 0);
   }
-  copyComputedStyles(src, dst, (k) => k.indexOf("transition") < 0);
+  copyComputedStyles(src, dst);
   dst.style.pointerEvents = "none";
   for (let i = 0; i < src.children.length; i++) {
     copyStyle(src.children[i], dst.children[i]);
   }
 }
-function copyComputedStyles(src, dst, copyKey) {
+function copyComputedStyles(src, dst) {
   let cs = getComputedStyle(src);
-  for (let key in cs)
-    if (!copyKey || copyKey(key)) {
-      Object.entries(dst.style).forEach(([key2, value]) => cs[key2] = value);
+  for (let key in cs) {
+    if (key.includes("transition")) continue;
+    try {
+      dst[key] = cs[key];
+    } catch (_) {
     }
+  }
 }
 function removeTroublesomeAttributes(dst) {
   ["id", "class", "style", "draggable"].forEach(function(att) {
@@ -221,7 +210,7 @@ var DragDropTouch = class {
    */
   listen() {
     if (!navigator.maxTouchPoints) return;
-    const opt = supportsPassive(this._dragRoot) ? { passive: false, capture: false } : false;
+    const opt = { passive: false, capture: false };
     this._dragRoot.addEventListener(
       "touchstart",
       this._touchstart.bind(this),
