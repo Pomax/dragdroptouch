@@ -61,7 +61,10 @@ function copyComputedStyles(src, dst) {
   const cs = getComputedStyle(src);
   for (let key in cs) {
     if (key.startsWith("transition")) continue;
-    dst.style[key] = cs[key];
+    try {
+      dst.style[key] = cs[key];
+    } catch (_) {
+    }
   }
 }
 function removeTroublesomeAttributes(dst) {

@@ -126,7 +126,9 @@ function copyComputedStyles(src: any, dst: any) {
   const cs = getComputedStyle(src);
   for (let key in cs) {
     if (key.startsWith("transition")) continue;
-    dst.style[key] = cs[key];
+    try {
+      dst.style[key] = cs[key];
+    } catch (_) {}
   }
 }
 
